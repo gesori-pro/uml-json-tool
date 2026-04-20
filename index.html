@@ -28,7 +28,7 @@
       --radius-lg: 18px;
       --radius-md: 14px;
       --radius-sm: 10px;
-      --sidebar-w: 340px;
+      --sidebar-w: 400px;
       --toolbar-h: 82px;
       --workspace-w: 2600px;
       --workspace-h: 1800px;
@@ -294,14 +294,54 @@
       border: 1px solid var(--line);
       border-radius: 14px;
       background: var(--surface-strong);
+      align-items: center;
+    }
+
+    .item-row > * {
+      min-width: 0;
     }
 
     .item-row.attribute {
-      grid-template-columns: 88px 1.15fr 1fr auto;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto;
+      grid-template-areas:
+        "visibility name remove"
+        "type type remove";
     }
 
     .item-row.method {
-      grid-template-columns: 88px 1fr 1.25fr 0.9fr auto;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) auto;
+      grid-template-areas:
+        "visibility name remove"
+        "params params remove"
+        "return return remove";
+    }
+
+    .row-visibility {
+      grid-area: visibility;
+    }
+
+    .row-name {
+      grid-area: name;
+    }
+
+    .row-type {
+      grid-area: type;
+    }
+
+    .row-params {
+      grid-area: params;
+    }
+
+    .row-return {
+      grid-area: return;
+    }
+
+    .row-remove {
+      grid-area: remove;
+      align-self: stretch;
+      width: 42px;
+      height: 100%;
+      min-height: 42px;
     }
 
     .icon-btn {
@@ -677,6 +717,32 @@
 
       .locale-group {
         min-width: 0;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .item-row.attribute,
+      .item-row.method {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .item-row.attribute {
+        grid-template-areas:
+          "visibility remove"
+          "name remove"
+          "type remove";
+      }
+
+      .item-row.method {
+        grid-template-areas:
+          "visibility remove"
+          "name remove"
+          "params remove"
+          "return remove";
+      }
+
+      .field-row {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -1844,10 +1910,10 @@
             ${cls.attributes.length
               ? cls.attributes.map((attribute, index) => `
                   <div class="item-row attribute" data-kind="attribute" data-index="${index}">
-                    ${visibilitySelect(attribute.visibility, "visibility")}
-                    <input data-prop="name" type="text" value="${escapeAttribute(attribute.name)}" placeholder="${escapeAttribute(defaultFieldName())}">
-                    <input data-prop="type" type="text" value="${escapeAttribute(attribute.type)}" placeholder="type">
-                    <button class="icon-btn" data-action="remove-item" type="button" title="${t("deleteAttributeTitle")}">×</button>
+                    ${visibilitySelect(attribute.visibility, "visibility", "row-visibility")}
+                    <input class="row-name" data-prop="name" type="text" value="${escapeAttribute(attribute.name)}" placeholder="${escapeAttribute(defaultFieldName())}">
+                    <input class="row-type" data-prop="type" type="text" value="${escapeAttribute(attribute.type)}" placeholder="type">
+                    <button class="icon-btn row-remove" data-action="remove-item" type="button" title="${t("deleteAttributeTitle")}">×</button>
                   </div>
                 `).join("")
               : `<div class="preview-card">${t("emptyAttributesHelp")}</div>`}
@@ -1863,11 +1929,11 @@
             ${cls.methods.length
               ? cls.methods.map((method, index) => `
                   <div class="item-row method" data-kind="method" data-index="${index}">
-                    ${visibilitySelect(method.visibility, "visibility")}
-                    <input data-prop="name" type="text" value="${escapeAttribute(method.name)}" placeholder="${escapeAttribute(defaultMethodName())}">
-                    <input data-prop="params" type="text" value="${escapeAttribute(method.params)}" placeholder="id: Guid, amount: decimal">
-                    <input data-prop="returnType" type="text" value="${escapeAttribute(method.returnType)}" placeholder="void">
-                    <button class="icon-btn" data-action="remove-item" type="button" title="${t("deleteMethodTitle")}">×</button>
+                    ${visibilitySelect(method.visibility, "visibility", "row-visibility")}
+                    <input class="row-name" data-prop="name" type="text" value="${escapeAttribute(method.name)}" placeholder="${escapeAttribute(defaultMethodName())}">
+                    <input class="row-params" data-prop="params" type="text" value="${escapeAttribute(method.params)}" placeholder="id: Guid, amount: decimal">
+                    <input class="row-return" data-prop="returnType" type="text" value="${escapeAttribute(method.returnType)}" placeholder="void">
+                    <button class="icon-btn row-remove" data-action="remove-item" type="button" title="${t("deleteMethodTitle")}">×</button>
                   </div>
                 `).join("")
               : `<div class="preview-card">${t("emptyMethodsHelp")}</div>`}
@@ -1922,9 +1988,9 @@
       `;
     }
 
-    function visibilitySelect(selected, prop) {
+    function visibilitySelect(selected, prop, className = "") {
       return `
-        <select data-prop="${prop}">
+        <select class="${className}" data-prop="${prop}">
           ${Object.keys(visibilityMap).map((key) => `
             <option value="${key}" ${selected === key ? "selected" : ""}>${visibilityLabel(key, true)}</option>
           `).join("")}
