@@ -63,17 +63,24 @@
       display: grid;
       grid-template-columns: var(--sidebar-w) 1fr;
       height: 100vh;
+      height: 100dvh;
+      min-height: 0;
     }
 
     .sidebar {
       display: flex;
       flex-direction: column;
       gap: 18px;
+      min-width: 0;
+      min-height: 0;
       padding: 22px 18px 18px;
       border-right: 1px solid var(--line);
       background: rgba(255, 250, 243, 0.86);
       backdrop-filter: blur(20px);
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     .brand-card,
@@ -336,6 +343,7 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
+      min-height: 0;
     }
 
     .topbar {
