@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UML JSON Tool</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
+
+    :root {
+      --bg: #f7f2e8;
+      --bg-strong: #eadfce;
+      --surface: rgba(255, 252, 247, 0.86);
+      --surface-strong: #fffdfa;
+      --surface-muted: #f2e8d9;
+      --ink: #16333a;
+      --ink-soft: #4b6468;
+      --accent: #c85f28;
+      --accent-strong: #9f4316;
+      --mint: #d7e6dd;
+      --sky: #dce9ef;
+      --line: rgba(22, 51, 58, 0.14);
+      --line-strong: rgba(22, 51, 58, 0.24);
+      --danger: #b5402a;
+      --success: #2d7d5b;
+      --shadow: 0 24px 50px rgba(80, 64, 37, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --sidebar-w: 340px;
+      --toolbar-h: 82px;
+      --workspace-w: 2600px;
+      --workspace-h: 1800px;
+      --font-display: "Space Grotesk", "IBM Plex Sans KR", sans-serif;
+      --font-body: "IBM Plex Sans KR", "Malgun Gothic", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(200, 95, 40, 0.10), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(45, 125, 91, 0.10), transparent 28%),
+        linear-gradient(180deg, #fbf7f0 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: var(--font-body);
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      height: 100vh;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 22px 18px 18px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 250, 243, 0.86);
+      backdrop-filter: blur(20px);
+      overflow: auto;
+    }
+
+    .brand-card,
+    .panel-card {
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .brand-card {
+      padding: 22px 20px 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .brand-card h1 {
+      margin: 16px 0 8px;
+      font-family: var(--font-display);
+      font-size: 29px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-card p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .panel-card {
+      padding: 18px 16px;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 18px;
+      letter-spacing: -0.03em;
+    }
+
+    .count-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 11px 14px;
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: #fff7f2;
+      box-shadow: 0 12px 24px rgba(159, 67, 22, 0.2);
+    }
+
+    .btn-secondary {
+      background: var(--surface-strong);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .btn-muted {
+      background: var(--surface-muted);
+      color: var(--ink);
+    }
+
+    .btn-danger {
+      background: #f9e4de;
+      color: var(--danger);
+    }
+
+    .tool-note {
+      margin-top: 12px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-strong);
+      color: var(--ink);
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(200, 95, 40, 0.52);
+      box-shadow: 0 0 0 4px rgba(200, 95, 40, 0.12);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.5;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 12.5px;
+    }
+
+    .inspector-empty {
+      padding: 18px 4px 8px;
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .inspector-section + .inspector-section {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .inspector-section h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item-row {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-strong);
+    }
+
+    .item-row.attribute {
+      grid-template-columns: 88px 1.15fr 1fr auto;
+    }
+
+    .item-row.method {
+      grid-template-columns: 88px 1fr 1.25fr 0.9fr auto;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 12px;
+      background: #f8e0dc;
+      color: var(--danger);
+      cursor: pointer;
+    }
+
+    .preview-card {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(220, 233, 239, 0.45) 0%, rgba(255, 255, 255, 0.76) 100%);
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .json-preview {
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 260px;
+      overflow: auto;
+      margin: 0;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .main-stage {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: var(--toolbar-h);
+      padding: 18px 24px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(251, 247, 240, 0.7);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .topbar-title h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 24px;
+      letter-spacing: -0.04em;
+      white-space: nowrap;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .topbar-controls {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 14px;
+      min-width: min(620px, 68vw);
+    }
+
+    .locale-group {
+      min-width: 140px;
+    }
+
+    .workspace-viewport {
+      position: relative;
+      flex: 1;
+      overflow: auto;
+      padding: 22px;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .workspace-viewport.panning {
+      cursor: grabbing;
+    }
+
+    .workspace-scale-shell {
+      position: relative;
+      width: var(--workspace-w);
+      height: var(--workspace-h);
+    }
+
+    .workspace {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: var(--workspace-w);
+      height: var(--workspace-h);
+      border-radius: 34px;
+      background:
+        linear-gradient(rgba(22, 51, 58, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(22, 51, 58, 0.05) 1px, transparent 1px),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.8), rgba(247, 242, 232, 0.86));
+      background-size: 30px 30px, 30px 30px, auto;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72), var(--shadow);
+      overflow: hidden;
+      transform-origin: top left;
+    }
+
+    .workspace::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px dashed rgba(22, 51, 58, 0.1);
+      border-radius: 24px;
+      pointer-events: none;
+    }
+
+    .edges-layer,
+    .nodes-layer {
+      position: absolute;
+      inset: 0;
+    }
+
+    .edges-layer {
+      pointer-events: none;
+    }
+
+    .edges-layer .relation-hit {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .nodes-layer {
+      pointer-events: none;
+    }
+
+    .uml-node {
+      position: absolute;
+      pointer-events: auto;
+      min-height: 124px;
+      border-radius: 18px;
+      border: 1px solid rgba(22, 51, 58, 0.14);
+      background: rgba(255, 253, 250, 0.96);
+      box-shadow: 0 20px 38px rgba(54, 45, 27, 0.14);
+      overflow: hidden;
+      user-select: none;
+      cursor: grab;
+      transition: box-shadow 140ms ease, border-color 140ms ease;
+    }
+
+    .uml-node.dragging {
+      cursor: grabbing;
+      box-shadow: 0 28px 44px rgba(54, 45, 27, 0.22);
+    }
+
+    .uml-node.selected {
+      border-color: rgba(200, 95, 40, 0.62);
+      box-shadow: 0 0 0 4px rgba(200, 95, 40, 0.12), 0 26px 50px rgba(54, 45, 27, 0.18);
+    }
+
+    .uml-node-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, rgba(220, 233, 239, 0.72) 0%, rgba(246, 237, 223, 0.95) 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .uml-node-title {
+      min-width: 0;
+    }
+
+    .uml-node-kind {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--accent-strong);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .uml-node-title h3 {
+      margin: 10px 0 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .drag-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--ink-soft);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .uml-section {
+      padding: 10px 14px 12px;
+      border-top: 1px solid rgba(22, 51, 58, 0.08);
+    }
+
+    .uml-section-label {
+      margin-bottom: 8px;
+      color: var(--ink-soft);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .uml-members {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .uml-member {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .uml-visibility {
+      flex: 0 0 auto;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .uml-member-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .uml-empty {
+      color: rgba(75, 100, 104, 0.72);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .workspace-empty {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(540px, calc(100% - 80px));
+      padding: 28px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.48);
+      text-align: center;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      pointer-events: none;
+    }
+
+    .workspace-empty h3 {
+      margin: 0 0 10px;
+      font-family: var(--font-display);
+      font-size: 28px;
+      letter-spacing: -0.04em;
+    }
+
+    .workspace-empty p {
+      margin: 0;
+      color: var(--ink-soft);
+      line-height: 1.7;
+    }
+
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(22, 51, 58, 0.08);
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1080px) {
+      body {
+        overflow: auto;
+      }
+
+      .app-shell {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .sidebar {
+        max-height: none;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .main-stage {
+        min-height: 68vh;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .topbar-controls {
+        min-width: 0;
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .locale-group {
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <section class="brand-card">
+        <div class="eyebrow">UML • JSON • HTML</div>
+        <h1 id="brandTitle">UML JSON Tool</h1>
+        <p id="brandDescription">클래스 박스를 배치하고, 속성·메서드·관계를 편집한 뒤 JSON으로 저장할 수 있는 단일 HTML 툴입니다.</p>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-head">
+          <h2 id="toolsHeading">도구</h2>
+          <span class="count-pill" id="countsBadge">0 classes · 0 links</span>
+        </div>
+        <div class="button-grid">
+          <button class="btn btn-primary" id="addClassBtn" type="button">+ 클래스</button>
+          <button class="btn btn-secondary" id="addRelationBtn" type="button">+ 관계</button>
+          <button class="btn btn-muted" id="sampleBtn" type="button">샘플 로드</button>
+          <button class="btn btn-secondary" id="newBtn" type="button">새 다이어그램</button>
+          <button class="btn btn-primary" id="saveBtn" type="button">JSON 저장</button>
+          <button class="btn btn-secondary" id="loadBtn" type="button">JSON 불러오기</button>
+          <button class="btn btn-muted" id="copyJsonBtn" type="button">JSON 복사</button>
+          <button class="btn btn-danger" id="deleteBtn" type="button">선택 삭제</button>
+        </div>
+        <p class="tool-note" id="toolNote">
+          팁: 클래스 박스를 드래그해 배치하세요. 관계는 시작 클래스와 도착 클래스를 인스펙터에서 바꿀 수 있습니다.
+        </p>
+        <input class="sr-only" id="fileInput" type="file" accept="application/json">
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-head">
+          <h2 id="selectionHeading">선택 항목</h2>
+          <span class="count-pill" id="selectionBadge">선택 없음</span>
+        </div>
+        <div id="inspectorPanel" class="inspector-empty">
+          왼쪽 버튼으로 클래스를 추가하거나, 다이어그램에서 박스/관계를 선택해 편집하세요.
+        </div>
+      </section>
+
+      <section class="panel-card" hidden>
+        <div class="panel-head">
+          <h2 id="jsonHeading">현재 JSON</h2>
+        </div>
+        <div class="preview-card">
+          <pre class="json-preview" id="jsonPreview">{}</pre>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main-stage">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h2 id="topbarHeading">다이어그램</h2>
+          <div class="status-chip" id="statusChip">준비됨</div>
+        </div>
+        <div class="topbar-controls">
+          <div class="field-group locale-group" style="margin: 0;">
+            <label class="field-label" id="localeLabel" for="localeSelect">언어</label>
+            <select id="localeSelect">
+              <option value="ko">한국어</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div class="field-group" style="margin: 0; min-width: min(420px, 42vw); flex: 1 1 420px;">
+            <label class="field-label" id="diagramTitleLabel" for="diagramTitle">다이어그램 제목</label>
+            <input id="diagramTitle" type="text" value="새 UML 다이어그램" placeholder="예: 주문 시스템 클래스 다이어그램">
+          </div>
+        </div>
+      </header>
+
+      <section class="workspace-viewport" id="workspaceViewport">
+        <div class="workspace-scale-shell" id="workspaceScaleShell">
+          <div class="workspace" id="workspace">
+            <svg class="edges-layer" id="edgesLayer" viewBox="0 0 2600 1800" preserveAspectRatio="none">
+              <defs>
+                <marker id="arrow-open" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+                  <path d="M1,1 L10,6 L1,11" fill="none" stroke="#16333a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                </marker>
+                <marker id="triangle-open" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="strokeWidth">
+                  <path d="M1,1 L11,7 L1,13 Z" fill="#fffdfa" stroke="#16333a" stroke-width="1.6" stroke-linejoin="round"></path>
+                </marker>
+                <marker id="diamond-open" markerWidth="14" markerHeight="14" refX="3" refY="7" orient="auto" markerUnits="strokeWidth">
+                  <path d="M11,7 L7,1 L3,7 L7,13 Z" fill="#fffdfa" stroke="#16333a" stroke-width="1.6" stroke-linejoin="round"></path>
+                </marker>
+                <marker id="diamond-filled" markerWidth="14" markerHeight="14" refX="3" refY="7" orient="auto" markerUnits="strokeWidth">
+                  <path d="M11,7 L7,1 L3,7 L7,13 Z" fill="#16333a" stroke="#16333a" stroke-width="1.6" stroke-linejoin="round"></path>
+                </marker>
+              </defs>
+            </svg>
+            <div class="nodes-layer" id="nodesLayer"></div>
+            <div class="workspace-empty" id="workspaceEmpty">
+              <h3 id="workspaceEmptyTitle">Start with one class</h3>
+              <p id="workspaceEmptyBody">
+                클래스 박스를 만든 뒤 속성·메서드를 채우고, 관계선을 연결해 UML 구조를 잡아보세요.
+                저장 결과는 JSON이라서 다른 도구나 백엔드와 연결하기도 쉽습니다.
+              </p>
+              <div class="legend-row" id="legendRow">
+                <span class="legend-chip">+ public</span>
+                <span class="legend-chip">- private</span>
+                <span class="legend-chip"># protected</span>
+                <span class="legend-chip">~ package</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "uml-json-tool.v1";
+    const UI_STORAGE_KEY = "uml-json-tool.ui.v1";
+    const DEFAULT_WIDTH = 290;
+    const WORKSPACE_SIZE = { width: 2600, height: 1800 };
+    const ZOOM_MIN = 0.45;
+    const ZOOM_MAX = 2.1;
+    const ZOOM_STEP = 0.12;
+    const initialLocale = loadLocale();
+    const initialZoom = loadZoom();
+    let currentLocale = initialLocale;
+    let currentZoom = initialZoom;
+
+    const translations = {
+      ko: {
+        documentTitle: "UML JSON Tool",
+        brandTitle: "UML JSON Tool",
+        brandDescription: "클래스 박스를 배치하고, 속성·메서드·관계를 편집한 뒤 JSON으로 저장할 수 있는 단일 HTML 툴입니다.",
+        toolsHeading: "도구",
+        selectionHeading: "선택 항목",
+        jsonHeading: "현재 JSON",
+        topbarHeading: "다이어그램",
+        statusReady: "준비됨",
+        localeLabel: "언어",
+        diagramTitleLabel: "다이어그램 제목",
+        diagramTitlePlaceholder: "예: 주문 시스템 클래스 다이어그램",
+        defaultDiagramTitle: "새 UML 다이어그램",
+        defaultClassName: "새클래스",
+        defaultFieldName: "필드",
+        defaultMethodName: "메서드",
+        addClassBtn: "+ 클래스",
+        addRelationBtn: "+ 관계",
+        sampleBtn: "샘플 로드",
+        newBtn: "새 다이어그램",
+        saveBtn: "JSON 저장",
+        loadBtn: "JSON 불러오기",
+        copyJsonBtn: "JSON 복사",
+        deleteBtn: "선택 삭제",
+        toolNote: "팁: 마우스 휠로 확대·축소하고, 빈 캔버스에서 좌클릭 드래그 또는 휠클릭 드래그로 화면을 이동할 수 있습니다. 관계는 시작 클래스와 도착 클래스를 인스펙터에서 바꿀 수 있습니다.",
+        workspaceEmptyTitle: "클래스 하나로 시작해보세요",
+        workspaceEmptyBody: "클래스 박스를 만든 뒤 속성·메서드를 채우고, 관계선을 연결해 UML 구조를 잡아보세요. 저장 결과는 JSON이라서 다른 도구나 백엔드와 연결하기도 쉽습니다.",
+        noSelection: "선택 없음",
+        classWord: "클래스",
+        relationWord: "관계",
+        nodeKindClass: "클래스",
+        attributesHeading: "속성",
+        methodsHeading: "메서드",
+        noAttributes: "속성이 아직 없습니다.",
+        noMethods: "메서드가 아직 없습니다.",
+        inspectorEmpty: "왼쪽 버튼으로 클래스를 추가하거나, 다이어그램에서 박스/관계를 선택해 편집하세요.",
+        recommendedFlow: "추천 사용 순서",
+        step1: "1. 클래스 추가",
+        step2: "2. 속성과 메서드 입력",
+        step3: "3. 관계 추가",
+        step4: "4. JSON 저장",
+        classNameLabel: "클래스 이름",
+        widthLabel: "폭",
+        addAttributeBtn: "+ 속성",
+        addMethodBtn: "+ 메서드",
+        deleteAttributeTitle: "속성 삭제",
+        deleteMethodTitle: "메서드 삭제",
+        emptyAttributesHelp: "속성이 없습니다. <strong>+ 속성</strong>으로 추가하세요.",
+        emptyMethodsHelp: "메서드가 없습니다. <strong>+ 메서드</strong>로 추가하세요.",
+        deleteClassBtn: "이 클래스 삭제",
+        relationTypeLabel: "관계 타입",
+        relationFromLabel: "시작 클래스",
+        relationToLabel: "도착 클래스",
+        relationLabelField: "라벨",
+        relationLabelPlaceholder: "예: uses",
+        currentRelation: "현재 관계",
+        deleteRelationBtn: "이 관계 삭제",
+        noClassName: "없음",
+        sampleDiagramTitle: "슬라임 몬스터 샘플",
+        addedClass: "클래스를 추가했습니다.",
+        needTwoClasses: "관계를 만들려면 클래스가 최소 2개 필요합니다.",
+        addedRelation: "관계를 추가했습니다.",
+        deletedClass: "클래스를 삭제했습니다.",
+        deletedRelation: "관계를 삭제했습니다.",
+        selectFirstToDelete: "삭제할 항목을 먼저 선택하세요.",
+        createdNewDiagram: "새 다이어그램을 만들었습니다.",
+        loadedSample: "샘플 다이어그램을 불러왔습니다.",
+        savedJson: "JSON 파일로 저장했습니다.",
+        copiedJson: "현재 JSON을 클립보드에 복사했습니다.",
+        copyFailed: "클립보드 복사에 실패했습니다.",
+        loadedJson: "JSON 다이어그램을 불러왔습니다.",
+        movedClass: "클래스 위치를 이동했습니다.",
+        readJsonError: "JSON 파일을 읽는 중 오류가 발생했습니다.",
+        appliedChanges: "수정 내용을 반영했습니다.",
+        addedAttribute: "속성을 추가했습니다.",
+        addedMethod: "메서드를 추가했습니다.",
+        deletedMember: "멤버를 삭제했습니다.",
+        initialHint: "드래그해서 배치하고 JSON으로 저장하세요.",
+        languageChanged: "언어를 변경했습니다."
+      },
+      en: {
+        documentTitle: "UML JSON Tool",
+        brandTitle: "UML JSON Tool",
+        brandDescription: "A single-file HTML tool for arranging class boxes, editing attributes, methods, and relations, then saving everything as JSON.",
+        toolsHeading: "Tools",
+        selectionHeading: "Selection",
+        jsonHeading: "Current JSON",
+        topbarHeading: "Diagram",
+        statusReady: "Ready",
+        localeLabel: "Language",
+        diagramTitleLabel: "Diagram Title",
+        diagramTitlePlaceholder: "e.g. Order system class diagram",
+        defaultDiagramTitle: "New UML Diagram",
+        defaultClassName: "NewClass",
+        defaultFieldName: "field",
+        defaultMethodName: "method",
+        addClassBtn: "+ Class",
+        addRelationBtn: "+ Relation",
+        sampleBtn: "Load Sample",
+        newBtn: "New Diagram",
+        saveBtn: "Save JSON",
+        loadBtn: "Load JSON",
+        copyJsonBtn: "Copy JSON",
+        deleteBtn: "Delete Selection",
+        toolNote: "Tip: Use the mouse wheel to zoom, and drag with left-click on empty canvas or middle-click to pan. You can change the source and target classes for relations from the inspector.",
+        workspaceEmptyTitle: "Start with one class",
+        workspaceEmptyBody: "Create a class box, fill in attributes and methods, then connect relations to shape your UML structure. Because the result is JSON, it is easy to reuse with other tools or a backend.",
+        noSelection: "Nothing selected",
+        classWord: "Class",
+        relationWord: "Relation",
+        nodeKindClass: "Class",
+        attributesHeading: "Attributes",
+        methodsHeading: "Methods",
+        noAttributes: "No attributes yet.",
+        noMethods: "No methods yet.",
+        inspectorEmpty: "Add a class from the left, or select a box or relation in the diagram to edit it.",
+        recommendedFlow: "Suggested flow",
+        step1: "1. Add a class",
+        step2: "2. Enter attributes and methods",
+        step3: "3. Add a relation",
+        step4: "4. Save JSON",
+        classNameLabel: "Class Name",
+        widthLabel: "Width",
+        addAttributeBtn: "+ Attribute",
+        addMethodBtn: "+ Method",
+        deleteAttributeTitle: "Delete attribute",
+        deleteMethodTitle: "Delete method",
+        emptyAttributesHelp: 'No attributes yet. Add one with <strong>+ Attribute</strong>.',
+        emptyMethodsHelp: 'No methods yet. Add one with <strong>+ Method</strong>.',
+        deleteClassBtn: "Delete This Class",
+        relationTypeLabel: "Relation Type",
+        relationFromLabel: "From Class",
+        relationToLabel: "To Class",
+        relationLabelField: "Label",
+        relationLabelPlaceholder: "e.g. uses",
+        currentRelation: "Current relation",
+        deleteRelationBtn: "Delete This Relation",
+        noClassName: "None",
+        sampleDiagramTitle: "Slime Monster Sample",
+        addedClass: "Added a class.",
+        needTwoClasses: "You need at least two classes to create a relation.",
+        addedRelation: "Added a relation.",
+        deletedClass: "Deleted the class.",
+        deletedRelation: "Deleted the relation.",
+        selectFirstToDelete: "Select something to delete first.",
+        createdNewDiagram: "Created a new diagram.",
+        loadedSample: "Loaded the sample diagram.",
+        savedJson: "Saved the JSON file.",
+        copiedJson: "Copied the current JSON to the clipboard.",
+        copyFailed: "Failed to copy to the clipboard.",
+        loadedJson: "Loaded the JSON diagram.",
+        movedClass: "Moved the class.",
+        readJsonError: "An error occurred while reading the JSON file.",
+        appliedChanges: "Applied your changes.",
+        addedAttribute: "Added an attribute.",
+        addedMethod: "Added a method.",
+        deletedMember: "Deleted the member.",
+        initialHint: "Drag items into place and save them as JSON.",
+        languageChanged: "Language updated."
+      }
+    };
+
+    const visibilityMap = {
+      public: "+",
+      private: "-",
+      protected: "#",
+      package: "~"
+    };
+
+    const visibilityNames = {
+      public: { ko: "공개", en: "public" },
+      private: { ko: "비공개", en: "private" },
+      protected: { ko: "보호", en: "protected" },
+      package: { ko: "패키지", en: "package" }
+    };
+
+    const relationPresets = {
+      association: {
+        names: { ko: "연관", en: "Association" },
+        dash: "",
+        markerStart: "",
+        markerEnd: ""
+      },
+      dependency: {
+        names: { ko: "의존", en: "Dependency" },
+        dash: "8 8",
+        markerStart: "",
+        markerEnd: "url(#arrow-open)"
+      },
+      inheritance: {
+        names: { ko: "상속", en: "Inheritance" },
+        dash: "",
+        markerStart: "",
+        markerEnd: "url(#triangle-open)"
+      },
+      aggregation: {
+        names: { ko: "집합", en: "Aggregation" },
+        dash: "",
+        markerStart: "url(#diamond-open)",
+        markerEnd: ""
+      },
+      composition: {
+        names: { ko: "합성", en: "Composition" },
+        dash: "",
+        markerStart: "url(#diamond-filled)",
+        markerEnd: ""
+      }
+    };
+
+    const refs = {
+      brandTitle: document.getElementById("brandTitle"),
+      brandDescription: document.getElementById("brandDescription"),
+      toolsHeading: document.getElementById("toolsHeading"),
+      countsBadge: document.getElementById("countsBadge"),
+      toolNote: document.getElementById("toolNote"),
+      selectionHeading: document.getElementById("selectionHeading"),
+      selectionBadge: document.getElementById("selectionBadge"),
+      jsonHeading: document.getElementById("jsonHeading"),
+      topbarHeading: document.getElementById("topbarHeading"),
+      statusChip: document.getElementById("statusChip"),
+      localeLabel: document.getElementById("localeLabel"),
+      localeSelect: document.getElementById("localeSelect"),
+      diagramTitleLabel: document.getElementById("diagramTitleLabel"),
+      diagramTitle: document.getElementById("diagramTitle"),
+      addClassBtn: document.getElementById("addClassBtn"),
+      addRelationBtn: document.getElementById("addRelationBtn"),
+      sampleBtn: document.getElementById("sampleBtn"),
+      newBtn: document.getElementById("newBtn"),
+      saveBtn: document.getElementById("saveBtn"),
+      loadBtn: document.getElementById("loadBtn"),
+      copyJsonBtn: document.getElementById("copyJsonBtn"),
+      deleteBtn: document.getElementById("deleteBtn"),
+      fileInput: document.getElementById("fileInput"),
+      inspectorPanel: document.getElementById("inspectorPanel"),
+      jsonPreview: document.getElementById("jsonPreview"),
+      workspaceViewport: document.getElementById("workspaceViewport"),
+      workspaceScaleShell: document.getElementById("workspaceScaleShell"),
+      workspace: document.getElementById("workspace"),
+      nodesLayer: document.getElementById("nodesLayer"),
+      edgesLayer: document.getElementById("edgesLayer"),
+      workspaceEmpty: document.getElementById("workspaceEmpty"),
+      workspaceEmptyTitle: document.getElementById("workspaceEmptyTitle"),
+      workspaceEmptyBody: document.getElementById("workspaceEmptyBody"),
+      legendRow: document.getElementById("legendRow")
+    };
+
+    const state = {
+      locale: currentLocale,
+      diagram: loadDiagram(),
+      selected: { type: null, id: null },
+      drag: null,
+      pan: null,
+      lastPanEndedAt: 0
+    };
+
+    function createEmptyDiagram() {
+      return {
+        version: 1,
+        type: "uml-class-diagram",
+        title: defaultDiagramTitle(),
+        nextClassId: 1,
+        nextRelationId: 1,
+        classes: [],
+        relations: []
+      };
+    }
+
+    function createDefaultAttribute() {
+      return {
+        id: cryptoLikeId(),
+        visibility: "private",
+        name: defaultFieldName(),
+        type: "string"
+      };
+    }
+
+    function createDefaultMethod() {
+      return {
+        id: cryptoLikeId(),
+        visibility: "public",
+        name: defaultMethodName(),
+        params: "",
+        returnType: "void"
+      };
+    }
+
+    function createClass(partial = {}) {
+      const id = partial.id || `class-${state.diagram.nextClassId++}`;
+      const suggested = suggestClassPosition();
+      return {
+        id,
+        name: partial.name || defaultClassName(),
+        x: typeof partial.x === "number" ? partial.x : suggested.x,
+        y: typeof partial.y === "number" ? partial.y : suggested.y,
+        width: typeof partial.width === "number" ? partial.width : DEFAULT_WIDTH,
+        attributes: Array.isArray(partial.attributes) ? partial.attributes : [createDefaultAttribute()],
+        methods: Array.isArray(partial.methods) ? partial.methods : [createDefaultMethod()]
+      };
+    }
+
+    function createRelation(partial = {}) {
+      const id = partial.id || `relation-${state.diagram.nextRelationId++}`;
+      const classes = state.diagram.classes;
+      return {
+        id,
+        from: partial.from || classes[0]?.id || null,
+        to: partial.to || classes[1]?.id || classes[0]?.id || null,
+        type: partial.type || "association",
+        label: partial.label || ""
+      };
+    }
+
+    function cryptoLikeId() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    function loadLocale() {
+      try {
+        const raw = localStorage.getItem(UI_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return parsed?.locale === "en" ? "en" : "ko";
+      } catch (error) {
+        return "ko";
+      }
+    }
+
+    function loadZoom() {
+      try {
+        const raw = localStorage.getItem(UI_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return clampZoom(parsed?.zoom);
+      } catch (error) {
+        return 1;
+      }
+    }
+
+    function saveUiState() {
+      localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({ locale: currentLocale, zoom: currentZoom }));
+    }
+
+    function t(key) {
+      return translations[currentLocale]?.[key] ?? translations.ko[key] ?? key;
+    }
+
+    function defaultDiagramTitle() {
+      return t("defaultDiagramTitle");
+    }
+
+    function defaultClassName() {
+      return t("defaultClassName");
+    }
+
+    function defaultFieldName() {
+      return t("defaultFieldName");
+    }
+
+    function defaultMethodName() {
+      return t("defaultMethodName");
+    }
+
+    function localizeValue(ko, en) {
+      return currentLocale === "ko" ? ko : en;
+    }
+
+    function relationTypeLabel(type) {
+      const preset = relationPresets[type] || relationPresets.association;
+      return currentLocale === "ko"
+        ? `${preset.names.ko} (${preset.names.en})`
+        : `${preset.names.en} (${preset.names.ko})`;
+    }
+
+    function visibilityLabel(key, includeTranslation = false) {
+      const symbol = visibilityMap[key] || "";
+      const names = visibilityNames[key] || visibilityNames.private;
+      if (currentLocale === "ko") {
+        return includeTranslation
+          ? `${symbol} ${names.en} (${names.ko})`
+          : `${symbol} ${names.ko}`;
+      }
+      return includeTranslation
+        ? `${symbol} ${names.en} (${names.ko})`
+        : `${symbol} ${names.en}`;
+    }
+
+    function countsText(classCount, relationCount) {
+      return currentLocale === "ko"
+        ? `${classCount}개 클래스 · ${relationCount}개 관계`
+        : `${classCount} classes · ${relationCount} relations`;
+    }
+
+    function selectionText() {
+      if (!state.selected.type) return t("noSelection");
+      return `${state.selected.type === "class" ? t("classWord") : t("relationWord")} · ${state.selected.id}`;
+    }
+
+    function buildLegendHtml() {
+      return Object.keys(visibilityMap)
+        .map((key) => `<span class="legend-chip">${visibilityLabel(key, true)}</span>`)
+        .join("");
+    }
+
+    function clampZoom(value) {
+      const next = Number(value);
+      if (!Number.isFinite(next)) return 1;
+      return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+    }
+
+    function applyZoom() {
+      refs.workspaceScaleShell.style.width = `${WORKSPACE_SIZE.width * currentZoom}px`;
+      refs.workspaceScaleShell.style.height = `${WORKSPACE_SIZE.height * currentZoom}px`;
+      refs.workspace.style.transform = `scale(${currentZoom})`;
+    }
+
+    function setZoom(nextZoom, anchorClientX, anchorClientY) {
+      const viewport = refs.workspaceViewport;
+      const previousZoom = currentZoom;
+      const clampedZoom = clampZoom(nextZoom);
+      if (Math.abs(clampedZoom - previousZoom) < 0.0001) return;
+
+      const rect = viewport.getBoundingClientRect();
+      const hasAnchor = typeof anchorClientX === "number" && typeof anchorClientY === "number";
+      const offsetX = hasAnchor ? anchorClientX - rect.left : viewport.clientWidth / 2;
+      const offsetY = hasAnchor ? anchorClientY - rect.top : viewport.clientHeight / 2;
+      const workspaceX = (viewport.scrollLeft + offsetX) / previousZoom;
+      const workspaceY = (viewport.scrollTop + offsetY) / previousZoom;
+
+      currentZoom = clampedZoom;
+      applyZoom();
+      saveUiState();
+
+      viewport.scrollTo({
+        left: workspaceX * currentZoom - offsetX,
+        top: workspaceY * currentZoom - offsetY
+      });
+    }
+
+    function applyStaticLocale() {
+      document.documentElement.lang = currentLocale;
+      document.title = t("documentTitle");
+      refs.brandTitle.textContent = t("brandTitle");
+      refs.brandDescription.textContent = t("brandDescription");
+      refs.toolsHeading.textContent = t("toolsHeading");
+      refs.toolNote.textContent = t("toolNote");
+      refs.selectionHeading.textContent = t("selectionHeading");
+      refs.jsonHeading.textContent = t("jsonHeading");
+      refs.topbarHeading.textContent = t("topbarHeading");
+      refs.localeLabel.textContent = t("localeLabel");
+      refs.localeSelect.value = currentLocale;
+      refs.diagramTitleLabel.textContent = t("diagramTitleLabel");
+      refs.diagramTitle.placeholder = t("diagramTitlePlaceholder");
+      refs.addClassBtn.textContent = t("addClassBtn");
+      refs.addRelationBtn.textContent = t("addRelationBtn");
+      refs.sampleBtn.textContent = t("sampleBtn");
+      refs.newBtn.textContent = t("newBtn");
+      refs.saveBtn.textContent = t("saveBtn");
+      refs.loadBtn.textContent = t("loadBtn");
+      refs.copyJsonBtn.textContent = t("copyJsonBtn");
+      refs.deleteBtn.textContent = t("deleteBtn");
+      refs.workspaceEmptyTitle.textContent = t("workspaceEmptyTitle");
+      refs.workspaceEmptyBody.textContent = t("workspaceEmptyBody");
+      refs.legendRow.innerHTML = buildLegendHtml();
+    }
+
+    function announce(message, kind = "default") {
+      refs.statusChip.textContent = message;
+      refs.statusChip.style.color = kind === "error"
+        ? "var(--danger)"
+        : kind === "success"
+          ? "var(--success)"
+          : "var(--ink-soft)";
+    }
+
+    function loadDiagram() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return createEmptyDiagram();
+        return normalizeDiagram(JSON.parse(raw));
+      } catch (error) {
+        console.warn("Failed to restore diagram", error);
+        return createEmptyDiagram();
+      }
+    }
+
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.diagram));
+    }
+
+    function normalizeDiagram(input) {
+      const base = createEmptyDiagram();
+      const diagram = {
+        ...base,
+        ...input,
+        title: typeof input?.title === "string" && input.title.trim() ? input.title : base.title,
+        nextClassId: Number.isFinite(input?.nextClassId) ? input.nextClassId : base.nextClassId,
+        nextRelationId: Number.isFinite(input?.nextRelationId) ? input.nextRelationId : base.nextRelationId
+      };
+
+      diagram.classes = Array.isArray(input?.classes)
+        ? input.classes.map((cls, index) => ({
+            id: typeof cls?.id === "string" ? cls.id : `class-${index + 1}`,
+            name: typeof cls?.name === "string" && cls.name.trim() ? cls.name : `Class${index + 1}`,
+            x: clampNumber(cls?.x, 60, 40, WORKSPACE_SIZE.width - 360),
+            y: clampNumber(cls?.y, 60, 40, WORKSPACE_SIZE.height - 240),
+            width: clampNumber(cls?.width, DEFAULT_WIDTH, 220, 460),
+            attributes: normalizeAttributes(cls?.attributes),
+            methods: normalizeMethods(cls?.methods)
+          }))
+        : [];
+
+      diagram.relations = Array.isArray(input?.relations)
+        ? input.relations
+            .map((rel, index) => ({
+              id: typeof rel?.id === "string" ? rel.id : `relation-${index + 1}`,
+              from: typeof rel?.from === "string" ? rel.from : null,
+              to: typeof rel?.to === "string" ? rel.to : null,
+              type: relationPresets[rel?.type] ? rel.type : "association",
+              label: typeof rel?.label === "string" ? rel.label : ""
+            }))
+            .filter((rel) => rel.from && rel.to)
+        : [];
+
+      const maxClass = diagram.classes
+        .map((cls) => Number(String(cls.id).replace("class-", "")))
+        .filter(Number.isFinite);
+      const maxRelation = diagram.relations
+        .map((rel) => Number(String(rel.id).replace("relation-", "")))
+        .filter(Number.isFinite);
+
+      diagram.nextClassId = Math.max(diagram.nextClassId, (maxClass.length ? Math.max(...maxClass) : 0) + 1);
+      diagram.nextRelationId = Math.max(diagram.nextRelationId, (maxRelation.length ? Math.max(...maxRelation) : 0) + 1);
+      return diagram;
+    }
+
+    function normalizeAttributes(attributes) {
+      if (!Array.isArray(attributes) || attributes.length === 0) return [];
+      return attributes.map((attribute, index) => ({
+        id: typeof attribute?.id === "string" ? attribute.id : `attribute-${index}-${cryptoLikeId()}`,
+        visibility: visibilityMap[attribute?.visibility] ? attribute.visibility : "private",
+        name: typeof attribute?.name === "string" && attribute.name.trim() ? attribute.name : `field${index + 1}`,
+        type: typeof attribute?.type === "string" && attribute.type.trim() ? attribute.type : "string"
+      }));
+    }
+
+    function normalizeMethods(methods) {
+      if (!Array.isArray(methods) || methods.length === 0) return [];
+      return methods.map((method, index) => ({
+        id: typeof method?.id === "string" ? method.id : `method-${index}-${cryptoLikeId()}`,
+        visibility: visibilityMap[method?.visibility] ? method.visibility : "public",
+        name: typeof method?.name === "string" && method.name.trim() ? method.name : `method${index + 1}`,
+        params: typeof method?.params === "string" ? method.params : "",
+        returnType: typeof method?.returnType === "string" && method.returnType.trim() ? method.returnType : "void"
+      }));
+    }
+
+    function clampNumber(value, fallback, min, max) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.min(max, Math.max(min, number));
+    }
+
+    function getSelectedClass() {
+      return state.selected.type === "class"
+        ? state.diagram.classes.find((cls) => cls.id === state.selected.id) || null
+        : null;
+    }
+
+    function getSelectedRelation() {
+      return state.selected.type === "relation"
+        ? state.diagram.relations.find((rel) => rel.id === state.selected.id) || null
+        : null;
+    }
+
+    function selectItem(type, id) {
+      state.selected = { type, id };
+      renderAll();
+    }
+
+    function clearSelection() {
+      state.selected = { type: null, id: null };
+      renderAll();
+    }
+
+    function addClass() {
+      const newClass = createClass();
+      state.diagram.classes.push(newClass);
+      state.selected = { type: "class", id: newClass.id };
+      persistAndRender(t("addedClass"), "success");
+    }
+
+    function addRelation() {
+      if (state.diagram.classes.length < 2) {
+        announce(t("needTwoClasses"), "error");
+        return;
+      }
+
+      const selectedClass = getSelectedClass();
+      const from = selectedClass?.id || state.diagram.classes[0].id;
+      const target = state.diagram.classes.find((cls) => cls.id !== from) || state.diagram.classes[0];
+      const relation = createRelation({ from, to: target.id, type: "association" });
+      state.diagram.relations.push(relation);
+      state.selected = { type: "relation", id: relation.id };
+      persistAndRender(t("addedRelation"), "success");
+    }
+
+    function deleteSelected() {
+      if (state.selected.type === "class") {
+        const targetId = state.selected.id;
+        state.diagram.classes = state.diagram.classes.filter((cls) => cls.id !== targetId);
+        state.diagram.relations = state.diagram.relations.filter((rel) => rel.from !== targetId && rel.to !== targetId);
+        clearSelectionAndPersist(t("deletedClass"));
+        return;
+      }
+      if (state.selected.type === "relation") {
+        const targetId = state.selected.id;
+        state.diagram.relations = state.diagram.relations.filter((rel) => rel.id !== targetId);
+        clearSelectionAndPersist(t("deletedRelation"));
+        return;
+      }
+      announce(t("selectFirstToDelete"), "error");
+    }
+
+    function clearSelectionAndPersist(message) {
+      state.selected = { type: null, id: null };
+      persistAndRender(message, "success");
+    }
+
+    function newDiagram() {
+      state.diagram = createEmptyDiagram();
+      state.selected = { type: null, id: null };
+      persistAndRender(t("createdNewDiagram"), "success");
+      requestAnimationFrame(focusViewport);
+    }
+
+    function loadSample() {
+      state.diagram = normalizeDiagram({
+        title: t("sampleDiagramTitle"),
+        nextClassId: 5,
+        nextRelationId: 4,
+        classes: [
+          {
+            id: "class-1",
+            name: "Monster",
+            x: 180,
+            y: 210,
+            width: 320,
+            attributes: [
+              { id: "a1", visibility: "protected", name: "maxHp", type: "int" },
+              { id: "a2", visibility: "protected", name: "moveSpeed", type: "float" },
+              { id: "a3", visibility: "protected", name: "state", type: "MonsterState" }
+            ],
+            methods: [
+              { id: "m1", visibility: "public", name: "TakeDamage", params: "amount: int", returnType: "void" },
+              { id: "m2", visibility: "public", name: "MoveTo", params: "target: Vector3", returnType: "void" },
+              { id: "m3", visibility: "public", name: "Die", params: "", returnType: "void" }
+            ]
+          },
+          {
+            id: "class-2",
+            name: "Slime",
+            x: 820,
+            y: 120,
+            width: 320,
+            attributes: [
+              { id: "a4", visibility: "private", name: "slimeType", type: "SlimeType" },
+              { id: "a5", visibility: "private", name: "splitCount", type: "int" },
+              { id: "a6", visibility: "private", name: "jumpCooldown", type: "float" }
+            ],
+            methods: [
+              { id: "m4", visibility: "public", name: "JumpAttack", params: "target: Player", returnType: "void" },
+              { id: "m5", visibility: "public", name: "Split", params: "", returnType: "Slime[]" }
+            ]
+          },
+          {
+            id: "class-3",
+            name: "SlimeAI",
+            x: 1200,
+            y: 560,
+            width: 320,
+            attributes: [
+              { id: "a7", visibility: "private", name: "aggroRange", type: "float" },
+              { id: "a8", visibility: "private", name: "patrolRadius", type: "float" }
+            ],
+            methods: [
+              { id: "m6", visibility: "public", name: "FindTarget", params: "players: List<Player>", returnType: "Player" },
+              { id: "m7", visibility: "public", name: "UpdateBehavior", params: "deltaTime: float", returnType: "void" }
+            ]
+          },
+          {
+            id: "class-4",
+            name: "LootTable",
+            x: 760,
+            y: 620,
+            width: 340,
+            attributes: [
+              { id: "a9", visibility: "private", name: "goldMin", type: "int" },
+              { id: "a10", visibility: "private", name: "goldMax", type: "int" },
+              { id: "a11", visibility: "private", name: "dropEntries", type: "List<DropEntry>" }
+            ],
+            methods: [
+              { id: "m8", visibility: "public", name: "RollDrops", params: "level: int", returnType: "List<ItemDrop>" }
+            ]
+          }
+        ],
+        relations: [
+          { id: "relation-1", from: "class-2", to: "class-1", type: "inheritance", label: localizeValue("상속", "extends") },
+          { id: "relation-2", from: "class-2", to: "class-3", type: "composition", label: localizeValue("행동 제어", "controls behavior") },
+          { id: "relation-3", from: "class-2", to: "class-4", type: "aggregation", label: localizeValue("드롭 테이블", "drops loot") }
+        ]
+      });
+      state.selected = { type: null, id: null };
+      persistAndRender(t("loadedSample"), "success");
+      requestAnimationFrame(focusViewport);
+    }
+
+    function persistAndRender(message, kind = "default") {
+      saveToStorage();
+      renderAll();
+      announce(message, kind);
+    }
+
+    function sanitizeFilename(value) {
+      return (value || "uml-diagram")
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, "-")
+        .replace(/\s+/g, "_")
+        .slice(0, 60) || "uml-diagram";
+    }
+
+    function downloadJson() {
+      const payload = JSON.stringify(state.diagram, null, 2);
+      const blob = new Blob([payload], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${sanitizeFilename(state.diagram.title)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      announce(t("savedJson"), "success");
+    }
+
+    async function copyJson() {
+      const payload = JSON.stringify(state.diagram, null, 2);
+      try {
+        await navigator.clipboard.writeText(payload);
+        announce(t("copiedJson"), "success");
+      } catch (error) {
+        const helper = document.createElement("textarea");
+        helper.value = payload;
+        helper.style.position = "fixed";
+        helper.style.opacity = "0";
+        document.body.appendChild(helper);
+        helper.select();
+        try {
+          document.execCommand("copy");
+          announce(t("copiedJson"), "success");
+        } catch (fallbackError) {
+          announce(t("copyFailed"), "error");
+        } finally {
+          helper.remove();
+        }
+      }
+    }
+
+    function importJsonText(text) {
+      const parsed = JSON.parse(text);
+      state.diagram = normalizeDiagram(parsed);
+      state.selected = { type: null, id: null };
+      persistAndRender(t("loadedJson"), "success");
+      requestAnimationFrame(focusViewport);
+    }
+
+    function suggestClassPosition() {
+      const viewport = refs.workspaceViewport;
+      const count = state.diagram.classes.length;
+      const centerX = (viewport.scrollLeft + viewport.clientWidth / 2) / currentZoom - DEFAULT_WIDTH / 2;
+      const centerY = (viewport.scrollTop + viewport.clientHeight / 2) / currentZoom - 120;
+      return {
+        x: clampNumber(centerX + count * 26, 120, 40, WORKSPACE_SIZE.width - DEFAULT_WIDTH - 40),
+        y: clampNumber(centerY + count * 22, 120, 40, WORKSPACE_SIZE.height - 180)
+      };
+    }
+
+    function focusViewport() {
+      const viewport = refs.workspaceViewport;
+      if (state.diagram.classes.length === 0) {
+        viewport.scrollTo({
+          left: Math.max(0, (WORKSPACE_SIZE.width * currentZoom - viewport.clientWidth) / 2),
+          top: Math.max(0, (WORKSPACE_SIZE.height * currentZoom - viewport.clientHeight) / 2)
+        });
+        return;
+      }
+
+      const xs = state.diagram.classes.map((cls) => cls.x + cls.width / 2);
+      const ys = state.diagram.classes.map((cls) => cls.y + 110);
+      const centerX = xs.reduce((sum, value) => sum + value, 0) / xs.length;
+      const centerY = ys.reduce((sum, value) => sum + value, 0) / ys.length;
+
+      viewport.scrollTo({
+        left: Math.max(0, centerX * currentZoom - viewport.clientWidth / 2),
+        top: Math.max(0, centerY * currentZoom - viewport.clientHeight / 2)
+      });
+    }
+
+    function renderAll() {
+      applyStaticLocale();
+      applyZoom();
+      refs.diagramTitle.value = state.diagram.title;
+      refs.countsBadge.textContent = countsText(state.diagram.classes.length, state.diagram.relations.length);
+      refs.selectionBadge.textContent = selectionText();
+      refs.workspaceEmpty.style.display = state.diagram.classes.length === 0 ? "block" : "none";
+      renderNodes();
+      renderRelations();
+      renderInspector();
+      refs.jsonPreview.textContent = JSON.stringify(state.diagram, null, 2);
+    }
+
+    function renderNodes() {
+      refs.nodesLayer.innerHTML = "";
+      state.diagram.classes.forEach((cls) => {
+        const node = document.createElement("article");
+        node.className = `uml-node${state.selected.type === "class" && state.selected.id === cls.id ? " selected" : ""}`;
+        node.style.left = `${cls.x}px`;
+        node.style.top = `${cls.y}px`;
+        node.style.width = `${cls.width}px`;
+        node.dataset.classId = cls.id;
+        node.innerHTML = `
+          <div class="uml-node-header">
+            <div class="uml-node-title">
+              <span class="uml-node-kind">${t("nodeKindClass")}</span>
+              <h3>${escapeHtml(cls.name)}</h3>
+            </div>
+            <div class="drag-badge">::</div>
+          </div>
+          <section class="uml-section">
+            <div class="uml-section-label">${t("attributesHeading")}</div>
+            <div class="uml-members">
+              ${cls.attributes.length
+                ? cls.attributes.map(renderAttributeLine).join("")
+                : `<div class="uml-empty">${t("noAttributes")}</div>`}
+            </div>
+          </section>
+          <section class="uml-section">
+            <div class="uml-section-label">${t("methodsHeading")}</div>
+            <div class="uml-members">
+              ${cls.methods.length
+                ? cls.methods.map(renderMethodLine).join("")
+                : `<div class="uml-empty">${t("noMethods")}</div>`}
+            </div>
+          </section>
+        `;
+
+        node.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (!state.drag) {
+            selectItem("class", cls.id);
+          }
+        });
+
+        node.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          beginDrag(event, cls, node);
+        });
+
+        refs.nodesLayer.appendChild(node);
+      });
+    }
+
+    function renderAttributeLine(attribute) {
+      return `
+        <div class="uml-member">
+          <span class="uml-visibility">${visibilityMap[attribute.visibility] || "-"}</span>
+          <span class="uml-member-text">${escapeHtml(attribute.name)}: ${escapeHtml(attribute.type)}</span>
+        </div>
+      `;
+    }
+
+    function renderMethodLine(method) {
+      const params = method.params?.trim() || "";
+      const returnType = method.returnType?.trim() || "void";
+      return `
+        <div class="uml-member">
+          <span class="uml-visibility">${visibilityMap[method.visibility] || "+"}</span>
+          <span class="uml-member-text">${escapeHtml(method.name)}(${escapeHtml(params)}): ${escapeHtml(returnType)}</span>
+        </div>
+      `;
+    }
+
+    function renderRelations() {
+      const defs = refs.edgesLayer.querySelector("defs").outerHTML;
+      refs.edgesLayer.innerHTML = defs;
+      state.diagram.relations.forEach((relation) => {
+        const fromMetrics = getNodeMetrics(relation.from);
+        const toMetrics = getNodeMetrics(relation.to);
+        if (!fromMetrics || !toMetrics) return;
+
+        const fromPoint = getAnchorPoint(fromMetrics, toMetrics);
+        const toPoint = getAnchorPoint(toMetrics, fromMetrics);
+        const preset = relationPresets[relation.type] || relationPresets.association;
+        const selected = state.selected.type === "relation" && state.selected.id === relation.id;
+        const color = selected ? "#c85f28" : "#16333a";
+        const midX = (fromPoint.x + toPoint.x) / 2;
+        const midY = (fromPoint.y + toPoint.y) / 2;
+
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.dataset.relationId = relation.id;
+        group.innerHTML = `
+          <line
+            x1="${fromPoint.x}" y1="${fromPoint.y}"
+            x2="${toPoint.x}" y2="${toPoint.y}"
+            stroke="${color}"
+            stroke-width="${selected ? 3.2 : 2.2}"
+            stroke-dasharray="${preset.dash}"
+            marker-start="${preset.markerStart}"
+            marker-end="${preset.markerEnd}"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></line>
+          <line
+            class="relation-hit"
+            x1="${fromPoint.x}" y1="${fromPoint.y}"
+            x2="${toPoint.x}" y2="${toPoint.y}"
+            stroke="transparent"
+            stroke-width="18"
+            fill="none"
+          ></line>
+          ${relation.label
+            ? `<rect x="${midX - 76}" y="${midY - 16}" width="152" height="28" rx="12" fill="rgba(255,253,250,0.94)" stroke="rgba(22,51,58,0.1)"></rect>
+               <text x="${midX}" y="${midY + 3.5}" text-anchor="middle" font-size="12" font-weight="600" fill="${color}" font-family="'IBM Plex Sans KR', 'Malgun Gothic', sans-serif">${escapeHtml(relation.label)}</text>`
+            : ""}
+        `;
+
+        const hit = group.querySelector(".relation-hit");
+        hit.addEventListener("click", (event) => {
+          event.stopPropagation();
+          selectItem("relation", relation.id);
+        });
+
+        refs.edgesLayer.appendChild(group);
+      });
+    }
+
+    function getNodeMetrics(classId) {
+      const node = refs.nodesLayer.querySelector(`[data-class-id="${classId}"]`);
+      if (!node) return null;
+      const cls = state.diagram.classes.find((item) => item.id === classId);
+      return {
+        x: cls.x,
+        y: cls.y,
+        width: cls.width,
+        height: node.offsetHeight,
+        centerX: cls.x + cls.width / 2,
+        centerY: cls.y + node.offsetHeight / 2
+      };
+    }
+
+    function getAnchorPoint(source, target) {
+      const dx = target.centerX - source.centerX;
+      const dy = target.centerY - source.centerY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      if (absDx > absDy) {
+        return {
+          x: dx >= 0 ? source.x + source.width : source.x,
+          y: source.centerY
+        };
+      }
+
+      return {
+        x: source.centerX,
+        y: dy >= 0 ? source.y + source.height : source.y
+      };
+    }
+
+    function renderInspector() {
+      const selectedClass = getSelectedClass();
+      const selectedRelation = getSelectedRelation();
+
+      if (selectedClass) {
+        refs.inspectorPanel.innerHTML = renderClassInspector(selectedClass);
+        return;
+      }
+
+      if (selectedRelation) {
+        refs.inspectorPanel.innerHTML = renderRelationInspector(selectedRelation);
+        return;
+      }
+
+      refs.inspectorPanel.className = "inspector-empty";
+      refs.inspectorPanel.innerHTML = `
+        ${t("inspectorEmpty")}
+        <div class="preview-card" style="margin-top: 16px;">
+          <strong style="display:block; margin-bottom:8px; color: var(--ink);">${t("recommendedFlow")}</strong>
+          ${t("step1")}<br>
+          ${t("step2")}<br>
+          ${t("step3")}<br>
+          ${t("step4")}
+        </div>
+      `;
+    }
+
+    function renderClassInspector(cls) {
+      refs.inspectorPanel.className = "";
+      return `
+        <div class="inspector-section">
+          <div class="field-group">
+            <label class="field-label" for="classNameField">${t("classNameLabel")}</label>
+            <input id="classNameField" data-field="name" type="text" value="${escapeAttribute(cls.name)}" placeholder="OrderService">
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label class="field-label" for="classXField">X</label>
+              <input id="classXField" data-field="x" type="number" value="${Math.round(cls.x)}">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="classYField">Y</label>
+              <input id="classYField" data-field="y" type="number" value="${Math.round(cls.y)}">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="classWidthField">${t("widthLabel")}</label>
+              <input id="classWidthField" data-field="width" type="number" min="220" max="460" value="${Math.round(cls.width)}">
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="panel-head" style="margin-bottom: 10px;">
+            <h3>${t("attributesHeading")}</h3>
+            <button class="btn btn-muted" data-action="add-attribute" type="button">${t("addAttributeBtn")}</button>
+          </div>
+          <div class="item-list">
+            ${cls.attributes.length
+              ? cls.attributes.map((attribute, index) => `
+                  <div class="item-row attribute" data-kind="attribute" data-index="${index}">
+                    ${visibilitySelect(attribute.visibility, "visibility")}
+                    <input data-prop="name" type="text" value="${escapeAttribute(attribute.name)}" placeholder="${escapeAttribute(defaultFieldName())}">
+                    <input data-prop="type" type="text" value="${escapeAttribute(attribute.type)}" placeholder="type">
+                    <button class="icon-btn" data-action="remove-item" type="button" title="${t("deleteAttributeTitle")}">×</button>
+                  </div>
+                `).join("")
+              : `<div class="preview-card">${t("emptyAttributesHelp")}</div>`}
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="panel-head" style="margin-bottom: 10px;">
+            <h3>${t("methodsHeading")}</h3>
+            <button class="btn btn-muted" data-action="add-method" type="button">${t("addMethodBtn")}</button>
+          </div>
+          <div class="item-list">
+            ${cls.methods.length
+              ? cls.methods.map((method, index) => `
+                  <div class="item-row method" data-kind="method" data-index="${index}">
+                    ${visibilitySelect(method.visibility, "visibility")}
+                    <input data-prop="name" type="text" value="${escapeAttribute(method.name)}" placeholder="${escapeAttribute(defaultMethodName())}">
+                    <input data-prop="params" type="text" value="${escapeAttribute(method.params)}" placeholder="id: Guid, amount: decimal">
+                    <input data-prop="returnType" type="text" value="${escapeAttribute(method.returnType)}" placeholder="void">
+                    <button class="icon-btn" data-action="remove-item" type="button" title="${t("deleteMethodTitle")}">×</button>
+                  </div>
+                `).join("")
+              : `<div class="preview-card">${t("emptyMethodsHelp")}</div>`}
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <button class="btn btn-danger" data-action="delete-selected" type="button">${t("deleteClassBtn")}</button>
+        </div>
+      `;
+    }
+
+    function renderRelationInspector(relation) {
+      refs.inspectorPanel.className = "";
+      const classOptions = state.diagram.classes.map((cls) => `
+        <option value="${cls.id}" ${relation.from === cls.id ? "selected" : ""}>${escapeHtml(cls.name)}</option>
+      `).join("");
+      const classOptionsTo = state.diagram.classes.map((cls) => `
+        <option value="${cls.id}" ${relation.to === cls.id ? "selected" : ""}>${escapeHtml(cls.name)}</option>
+      `).join("");
+
+      return `
+        <div class="inspector-section">
+          <div class="field-group">
+            <label class="field-label" for="relationType">${t("relationTypeLabel")}</label>
+            <select id="relationType" data-relation-field="type">
+              ${Object.entries(relationPresets).map(([value, preset]) => `
+                <option value="${value}" ${relation.type === value ? "selected" : ""}>${relationTypeLabel(value)}</option>
+              `).join("")}
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="relationFrom">${t("relationFromLabel")}</label>
+            <select id="relationFrom" data-relation-field="from">${classOptions}</select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="relationTo">${t("relationToLabel")}</label>
+            <select id="relationTo" data-relation-field="to">${classOptionsTo}</select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="relationLabel">${t("relationLabelField")}</label>
+            <input id="relationLabel" data-relation-field="label" type="text" value="${escapeAttribute(relation.label)}" placeholder="${escapeAttribute(t("relationLabelPlaceholder"))}">
+          </div>
+        </div>
+        <div class="preview-card">
+          ${t("currentRelation")}: <strong>${escapeHtml(classNameById(relation.from))}</strong>
+          → <strong>${escapeHtml(classNameById(relation.to))}</strong>
+        </div>
+        <div class="inspector-section">
+          <button class="btn btn-danger" data-action="delete-selected" type="button">${t("deleteRelationBtn")}</button>
+        </div>
+      `;
+    }
+
+    function visibilitySelect(selected, prop) {
+      return `
+        <select data-prop="${prop}">
+          ${Object.keys(visibilityMap).map((key) => `
+            <option value="${key}" ${selected === key ? "selected" : ""}>${visibilityLabel(key, true)}</option>
+          `).join("")}
+        </select>
+      `;
+    }
+
+    function classNameById(id) {
+      return state.diagram.classes.find((cls) => cls.id === id)?.name || id || t("noClassName");
+    }
+
+    function beginDrag(event, cls, element) {
+      const point = pointerToWorkspace(event);
+      state.drag = {
+        classId: cls.id,
+        offsetX: point.x - cls.x,
+        offsetY: point.y - cls.y,
+        element
+      };
+      element.classList.add("dragging");
+      state.selected = { type: "class", id: cls.id };
+      renderInspector();
+      window.addEventListener("pointermove", onDragMove);
+      window.addEventListener("pointerup", endDrag);
+    }
+
+    function beginPan(event) {
+      state.pan = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        scrollLeft: refs.workspaceViewport.scrollLeft,
+        scrollTop: refs.workspaceViewport.scrollTop,
+        moved: false
+      };
+      refs.workspaceViewport.classList.add("panning");
+      window.addEventListener("pointermove", onPanMove);
+      window.addEventListener("pointerup", endPan);
+      window.addEventListener("pointercancel", endPan);
+    }
+
+    function onPanMove(event) {
+      if (!state.pan || event.pointerId !== state.pan.pointerId) return;
+      if (Math.abs(event.clientX - state.pan.startX) > 2 || Math.abs(event.clientY - state.pan.startY) > 2) {
+        state.pan.moved = true;
+      }
+      refs.workspaceViewport.scrollLeft = state.pan.scrollLeft - (event.clientX - state.pan.startX);
+      refs.workspaceViewport.scrollTop = state.pan.scrollTop - (event.clientY - state.pan.startY);
+    }
+
+    function endPan(event) {
+      if (!state.pan) return;
+      if (event && event.pointerId !== undefined && event.pointerId !== state.pan.pointerId) return;
+      if (state.pan.moved) {
+        state.lastPanEndedAt = Date.now();
+      }
+      refs.workspaceViewport.classList.remove("panning");
+      state.pan = null;
+      window.removeEventListener("pointermove", onPanMove);
+      window.removeEventListener("pointerup", endPan);
+      window.removeEventListener("pointercancel", endPan);
+    }
+
+    function onDragMove(event) {
+      if (!state.drag) return;
+      const cls = state.diagram.classes.find((item) => item.id === state.drag.classId);
+      if (!cls) return;
+
+      const point = pointerToWorkspace(event);
+      cls.x = clampNumber(point.x - state.drag.offsetX, cls.x, 24, WORKSPACE_SIZE.width - cls.width - 24);
+      cls.y = clampNumber(point.y - state.drag.offsetY, cls.y, 24, WORKSPACE_SIZE.height - 120);
+      state.drag.element.style.left = `${cls.x}px`;
+      state.drag.element.style.top = `${cls.y}px`;
+      renderRelations();
+
+      const xField = refs.inspectorPanel.querySelector('[data-field="x"]');
+      const yField = refs.inspectorPanel.querySelector('[data-field="y"]');
+      if (xField) xField.value = Math.round(cls.x);
+      if (yField) yField.value = Math.round(cls.y);
+    }
+
+    function endDrag() {
+      if (!state.drag) return;
+      state.drag.element.classList.remove("dragging");
+      state.drag = null;
+      window.removeEventListener("pointermove", onDragMove);
+      window.removeEventListener("pointerup", endDrag);
+      saveToStorage();
+      announce(t("movedClass"), "success");
+    }
+
+    function pointerToWorkspace(event) {
+      const rect = refs.workspaceViewport.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left + refs.workspaceViewport.scrollLeft) / currentZoom,
+        y: (event.clientY - rect.top + refs.workspaceViewport.scrollTop) / currentZoom
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/"/g, "&quot;");
+    }
+
+    refs.diagramTitle.addEventListener("input", () => {
+      state.diagram.title = refs.diagramTitle.value.trim() || defaultDiagramTitle();
+      saveToStorage();
+      refs.jsonPreview.textContent = JSON.stringify(state.diagram, null, 2);
+    });
+
+    refs.addClassBtn.addEventListener("click", addClass);
+    refs.addRelationBtn.addEventListener("click", addRelation);
+    refs.sampleBtn.addEventListener("click", loadSample);
+    refs.newBtn.addEventListener("click", newDiagram);
+    refs.saveBtn.addEventListener("click", downloadJson);
+    refs.copyJsonBtn.addEventListener("click", copyJson);
+    refs.loadBtn.addEventListener("click", () => refs.fileInput.click());
+    refs.deleteBtn.addEventListener("click", deleteSelected);
+    refs.localeSelect.addEventListener("change", (event) => {
+      const nextLocale = event.target.value === "en" ? "en" : "ko";
+      if (nextLocale === currentLocale) return;
+      const previousLocale = currentLocale;
+      currentLocale = nextLocale;
+      state.locale = nextLocale;
+      if (state.diagram.title === translations[previousLocale].defaultDiagramTitle) {
+        state.diagram.title = translations[nextLocale].defaultDiagramTitle;
+      }
+      saveUiState();
+      saveToStorage();
+      renderAll();
+      announce(t("languageChanged"), "success");
+    });
+
+    refs.fileInput.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        importJsonText(await file.text());
+      } catch (error) {
+        announce(t("readJsonError"), "error");
+      } finally {
+        refs.fileInput.value = "";
+      }
+    });
+
+    refs.workspaceViewport.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const zoomFactor = event.deltaY < 0 ? 1 + ZOOM_STEP : 1 / (1 + ZOOM_STEP);
+      setZoom(currentZoom * zoomFactor, event.clientX, event.clientY);
+    }, { passive: false });
+
+    refs.workspaceViewport.addEventListener("pointerdown", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (event.button === 1) {
+        event.preventDefault();
+        beginPan(event);
+        return;
+      }
+      if (event.button !== 0) return;
+
+      const hitNode = target.closest(".uml-node");
+      const hitRelation = target.closest("[data-relation-id]");
+      if (!hitNode && !hitRelation) {
+        event.preventDefault();
+        beginPan(event);
+      }
+    });
+
+    refs.workspaceViewport.addEventListener("auxclick", (event) => {
+      if (event.button === 1) {
+        event.preventDefault();
+      }
+    });
+
+    function applyInspectorValue(target) {
+      const selectedClass = getSelectedClass();
+      const selectedRelation = getSelectedRelation();
+      if (!(target instanceof HTMLElement)) return;
+
+      if (selectedClass && target.dataset.field) {
+        if (target.dataset.field === "name") {
+          selectedClass.name = target.value || defaultClassName();
+        } else if (target.dataset.field === "x") {
+          selectedClass.x = clampNumber(target.value, selectedClass.x, 24, WORKSPACE_SIZE.width - selectedClass.width - 24);
+        } else if (target.dataset.field === "y") {
+          selectedClass.y = clampNumber(target.value, selectedClass.y, 24, WORKSPACE_SIZE.height - 120);
+        } else if (target.dataset.field === "width") {
+          selectedClass.width = clampNumber(target.value, selectedClass.width, 220, 460);
+        }
+        return;
+      }
+
+      if (selectedClass) {
+        const row = target.closest(".item-row");
+        if (row) {
+          const kind = row.dataset.kind;
+          const index = Number(row.dataset.index);
+          const prop = target.dataset.prop;
+          if (kind === "attribute" && selectedClass.attributes[index]) {
+            selectedClass.attributes[index][prop] = target.value;
+          } else if (kind === "method" && selectedClass.methods[index]) {
+            selectedClass.methods[index][prop] = target.value;
+          }
+          return;
+        }
+      }
+
+      if (selectedRelation && target.dataset.relationField) {
+        selectedRelation[target.dataset.relationField] = target.value;
+      }
+    }
+
+    refs.inspectorPanel.addEventListener("input", (event) => {
+      applyInspectorValue(event.target);
+      saveToStorage();
+      refs.jsonPreview.textContent = JSON.stringify(state.diagram, null, 2);
+    });
+
+    refs.inspectorPanel.addEventListener("change", (event) => {
+      applyInspectorValue(event.target);
+      persistAndRender(t("appliedChanges"), "success");
+    });
+
+    refs.inspectorPanel.addEventListener("click", (event) => {
+      const selectedClass = getSelectedClass();
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const action = target.dataset.action;
+      if (!action) return;
+
+      if (action === "delete-selected") {
+        deleteSelected();
+        return;
+      }
+
+      if (!selectedClass) return;
+
+      if (action === "add-attribute") {
+        selectedClass.attributes.push(createDefaultAttribute());
+        persistAndRender(t("addedAttribute"), "success");
+        return;
+      }
+
+      if (action === "add-method") {
+        selectedClass.methods.push(createDefaultMethod());
+        persistAndRender(t("addedMethod"), "success");
+        return;
+      }
+
+      if (action === "remove-item") {
+        const row = target.closest(".item-row");
+        if (!row) return;
+        const kind = row.dataset.kind;
+        const index = Number(row.dataset.index);
+        if (kind === "attribute") {
+          selectedClass.attributes.splice(index, 1);
+        } else if (kind === "method") {
+          selectedClass.methods.splice(index, 1);
+        }
+        persistAndRender(t("deletedMember"), "success");
+      }
+    });
+
+    refs.workspaceViewport.addEventListener("click", (event) => {
+      if (Date.now() - state.lastPanEndedAt < 120) {
+        return;
+      }
+      if (event.target === refs.workspaceViewport || event.target === refs.workspaceScaleShell || event.target === refs.workspace || event.target === refs.nodesLayer || event.target === refs.edgesLayer) {
+        clearSelection();
+      }
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if ((event.key === "Delete" || event.key === "Backspace") && state.selected.type) {
+        const activeTag = document.activeElement?.tagName;
+        if (activeTag !== "INPUT" && activeTag !== "TEXTAREA" && activeTag !== "SELECT") {
+          event.preventDefault();
+          deleteSelected();
+        }
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        downloadJson();
+      }
+    });
+
+    renderAll();
+    announce(t("initialHint"));
+    requestAnimationFrame(focusViewport);
+  </script>
+</body>
+</html>
