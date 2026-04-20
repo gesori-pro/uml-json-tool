@@ -32,6 +32,7 @@
       --toolbar-h: 82px;
       --workspace-w: 2600px;
       --workspace-h: 1800px;
+      --grid-step: 10;
       --font-display: "Space Grotesk", "IBM Plex Sans KR", sans-serif;
       --font-body: "IBM Plex Sans KR", "Malgun Gothic", sans-serif;
     }
@@ -447,8 +448,57 @@
       user-select: none;
     }
 
-    .workspace-viewport.panning {
+    .workspace-viewport.panning,
+    .workspace-viewport.space-pan {
       cursor: grabbing;
+    }
+
+    .workspace-tools {
+      position: sticky;
+      top: 16px;
+      z-index: 20;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+      margin-bottom: 12px;
+    }
+
+    .workspace-tools-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.82);
+      border-radius: 18px;
+      background: rgba(255, 252, 247, 0.88);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 26px rgba(80, 64, 37, 0.12);
+      pointer-events: auto;
+    }
+
+    .tool-icon-btn,
+    .zoom-readout {
+      min-height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tool-icon-btn {
+      min-width: 38px;
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .zoom-readout {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      padding: 0 12px;
     }
 
     .workspace-scale-shell {
@@ -526,6 +576,10 @@
       box-shadow: 0 0 0 4px rgba(200, 95, 40, 0.12), 0 26px 50px rgba(54, 45, 27, 0.18);
     }
 
+    .uml-node.resizing {
+      box-shadow: 0 0 0 4px rgba(200, 95, 40, 0.12), 0 30px 54px rgba(54, 45, 27, 0.22);
+    }
+
     .uml-node-header {
       display: flex;
       align-items: center;
@@ -574,6 +628,29 @@
       color: var(--ink-soft);
       font-weight: 700;
       font-size: 16px;
+    }
+
+    .resize-handle {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 16px;
+      height: 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(22, 51, 58, 0.16);
+      background:
+        linear-gradient(135deg, rgba(200, 95, 40, 0.16), rgba(255,255,255,0.92));
+      cursor: nwse-resize;
+      pointer-events: auto;
+    }
+
+    .resize-handle::before {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-right: 2px solid rgba(22, 51, 58, 0.4);
+      border-bottom: 2px solid rgba(22, 51, 58, 0.4);
+      border-bottom-right-radius: 3px;
     }
 
     .uml-section {
@@ -819,6 +896,15 @@
       </header>
 
       <section class="workspace-viewport" id="workspaceViewport">
+        <div class="workspace-tools">
+          <div class="workspace-tools-inner">
+            <button class="tool-icon-btn" id="zoomOutBtn" type="button">-</button>
+            <button class="tool-icon-btn" id="zoomResetBtn" type="button">100%</button>
+            <div class="zoom-readout" id="zoomReadout">100%</div>
+            <button class="tool-icon-btn" id="fitViewBtn" type="button">Fit</button>
+            <button class="tool-icon-btn" id="zoomInBtn" type="button">+</button>
+          </div>
+        </div>
         <div class="workspace-scale-shell" id="workspaceScaleShell">
           <div class="workspace" id="workspace">
             <svg class="edges-layer" id="edgesLayer" viewBox="0 0 2600 1800" preserveAspectRatio="none">
@@ -862,6 +948,7 @@
     const UI_STORAGE_KEY = "uml-json-tool.ui.v1";
     const DEFAULT_WIDTH = 290;
     const WORKSPACE_SIZE = { width: 2600, height: 1800 };
+    const GRID_SIZE = 10;
     const ZOOM_MIN = 0.45;
     const ZOOM_MAX = 2.1;
     const ZOOM_STEP = 0.12;
@@ -895,7 +982,7 @@
         loadBtn: "JSON 불러오기",
         copyJsonBtn: "JSON 복사",
         deleteBtn: "선택 삭제",
-        toolNote: "팁: 일반 휠은 스크롤, Ctrl/Cmd + 휠은 확대·축소입니다. 빈 캔버스에서 좌클릭 드래그 또는 휠클릭 드래그로 화면을 이동할 수 있고, 관계는 인스펙터에서 바꿀 수 있습니다.",
+        toolNote: "팁: 일반 휠은 스크롤, Ctrl/Cmd + 휠은 확대·축소입니다. Space + 드래그로 손툴처럼 이동할 수 있고, 빈 캔버스 좌클릭 드래그와 휠클릭 드래그도 지원합니다.",
         workspaceEmptyTitle: "클래스 하나로 시작해보세요",
         workspaceEmptyBody: "클래스 박스를 만든 뒤 속성·메서드를 채우고, 관계선을 연결해 UML 구조를 잡아보세요. 저장 결과는 JSON이라서 다른 도구나 백엔드와 연결하기도 쉽습니다.",
         noSelection: "선택 없음",
@@ -949,7 +1036,12 @@
         addedMethod: "메서드를 추가했습니다.",
         deletedMember: "멤버를 삭제했습니다.",
         initialHint: "드래그해서 배치하고 JSON으로 저장하세요.",
-        languageChanged: "언어를 변경했습니다."
+        languageChanged: "언어를 변경했습니다.",
+        zoomOut: "축소",
+        zoomIn: "확대",
+        zoomReset: "100% 보기",
+        fitView: "화면 맞춤",
+        fitViewDone: "화면에 맞게 정렬했습니다."
       },
       en: {
         documentTitle: "UML JSON Tool",
@@ -975,7 +1067,7 @@
         loadBtn: "Load JSON",
         copyJsonBtn: "Copy JSON",
         deleteBtn: "Delete Selection",
-        toolNote: "Tip: Use the wheel to scroll, and Ctrl/Cmd + wheel to zoom. You can pan with left-drag on empty canvas or middle-drag, and change relation endpoints from the inspector.",
+        toolNote: "Tip: Use the wheel to scroll, and Ctrl/Cmd + wheel to zoom. You can pan like a hand tool with Space + drag, and also with left-drag on empty canvas or middle-drag.",
         workspaceEmptyTitle: "Start with one class",
         workspaceEmptyBody: "Create a class box, fill in attributes and methods, then connect relations to shape your UML structure. Because the result is JSON, it is easy to reuse with other tools or a backend.",
         noSelection: "Nothing selected",
@@ -1029,7 +1121,12 @@
         addedMethod: "Added a method.",
         deletedMember: "Deleted the member.",
         initialHint: "Drag items into place and save them as JSON.",
-        languageChanged: "Language updated."
+        languageChanged: "Language updated.",
+        zoomOut: "Zoom Out",
+        zoomIn: "Zoom In",
+        zoomReset: "Reset to 100%",
+        fitView: "Fit to Screen",
+        fitViewDone: "Fitted the diagram to the viewport."
       }
     };
 
@@ -1103,6 +1200,11 @@
       loadBtn: document.getElementById("loadBtn"),
       copyJsonBtn: document.getElementById("copyJsonBtn"),
       deleteBtn: document.getElementById("deleteBtn"),
+      zoomOutBtn: document.getElementById("zoomOutBtn"),
+      zoomResetBtn: document.getElementById("zoomResetBtn"),
+      zoomReadout: document.getElementById("zoomReadout"),
+      fitViewBtn: document.getElementById("fitViewBtn"),
+      zoomInBtn: document.getElementById("zoomInBtn"),
       fileInput: document.getElementById("fileInput"),
       inspectorPanel: document.getElementById("inspectorPanel"),
       jsonPreview: document.getElementById("jsonPreview"),
@@ -1122,8 +1224,10 @@
       diagram: loadDiagram(),
       selected: { type: null, id: null },
       drag: null,
+      resize: null,
       pan: null,
-      lastPanEndedAt: 0
+      lastPanEndedAt: 0,
+      isSpacePressed: false
     };
 
     function createEmptyDiagram() {
@@ -1272,6 +1376,15 @@
         .join("");
     }
 
+    function snapToGrid(value) {
+      return Math.round(Number(value) / GRID_SIZE) * GRID_SIZE;
+    }
+
+    function clampAndMaybeSnap(value, fallback, min, max, snap = false) {
+      const clamped = clampNumber(value, fallback, min, max);
+      return snap ? clampNumber(snapToGrid(clamped), fallback, min, max) : clamped;
+    }
+
     function clampZoom(value) {
       const next = Number(value);
       if (!Number.isFinite(next)) return 1;
@@ -1282,6 +1395,62 @@
       refs.workspaceScaleShell.style.width = `${WORKSPACE_SIZE.width * currentZoom}px`;
       refs.workspaceScaleShell.style.height = `${WORKSPACE_SIZE.height * currentZoom}px`;
       refs.workspace.style.transform = `scale(${currentZoom})`;
+      refs.zoomReadout.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+
+    function fitToScreen() {
+      const viewport = refs.workspaceViewport;
+      if (state.diagram.classes.length === 0) {
+        setZoom(1);
+        requestAnimationFrame(focusViewport);
+        return;
+      }
+
+      const bounds = getDiagramBounds();
+      const availableWidth = Math.max(200, viewport.clientWidth - 72);
+      const availableHeight = Math.max(200, viewport.clientHeight - 72);
+      const targetZoom = clampZoom(Math.min(
+        availableWidth / Math.max(1, bounds.width),
+        availableHeight / Math.max(1, bounds.height)
+      ));
+
+      currentZoom = targetZoom;
+      applyZoom();
+      saveUiState();
+      viewport.scrollTo({
+        left: Math.max(0, bounds.x * currentZoom - 36),
+        top: Math.max(0, bounds.y * currentZoom - 36)
+      });
+    }
+
+    function getDiagramBounds() {
+      const classes = state.diagram.classes;
+      if (!classes.length) {
+        return { x: 0, y: 0, width: WORKSPACE_SIZE.width, height: WORKSPACE_SIZE.height };
+      }
+
+      const metrics = classes.map((cls) => {
+        const nodeMetrics = getNodeMetrics(cls.id);
+        return {
+          x: cls.x,
+          y: cls.y,
+          width: cls.width,
+          height: nodeMetrics?.height || 180
+        };
+      });
+
+      const minX = Math.min(...metrics.map((item) => item.x));
+      const minY = Math.min(...metrics.map((item) => item.y));
+      const maxX = Math.max(...metrics.map((item) => item.x + item.width));
+      const maxY = Math.max(...metrics.map((item) => item.y + item.height));
+      const padding = 40;
+
+      return {
+        x: Math.max(0, minX - padding),
+        y: Math.max(0, minY - padding),
+        width: Math.min(WORKSPACE_SIZE.width, maxX - minX + padding * 2),
+        height: Math.min(WORKSPACE_SIZE.height, maxY - minY + padding * 2)
+      };
     }
 
     function setZoom(nextZoom, anchorClientX, anchorClientY) {
@@ -1329,6 +1498,11 @@
       refs.loadBtn.textContent = t("loadBtn");
       refs.copyJsonBtn.textContent = t("copyJsonBtn");
       refs.deleteBtn.textContent = t("deleteBtn");
+      refs.zoomOutBtn.title = t("zoomOut");
+      refs.zoomInBtn.title = t("zoomIn");
+      refs.zoomResetBtn.title = t("zoomReset");
+      refs.fitViewBtn.title = t("fitView");
+      refs.fitViewBtn.textContent = currentLocale === "ko" ? "맞춤" : "Fit";
       refs.workspaceEmptyTitle.textContent = t("workspaceEmptyTitle");
       refs.workspaceEmptyBody.textContent = t("workspaceEmptyBody");
       refs.legendRow.innerHTML = buildLegendHtml();
@@ -1722,17 +1896,43 @@
                 : `<div class="uml-empty">${t("noMethods")}</div>`}
             </div>
           </section>
+          <div class="resize-handle" data-resize-handle="true"></div>
         `;
 
         node.addEventListener("click", (event) => {
           event.stopPropagation();
-          if (!state.drag) {
+          if (!state.drag && !state.resize) {
             selectItem("class", cls.id);
           }
         });
 
+        node.addEventListener("dblclick", (event) => {
+          event.stopPropagation();
+          selectItem("class", cls.id);
+          requestAnimationFrame(() => {
+            const field = refs.inspectorPanel.querySelector("#classNameField");
+            if (field instanceof HTMLInputElement) {
+              field.focus();
+              field.select();
+            }
+          });
+        });
+
         node.addEventListener("pointerdown", (event) => {
+          if (state.isSpacePressed) {
+            event.preventDefault();
+            event.stopPropagation();
+            beginPan(event);
+            return;
+          }
           if (event.button !== 0) return;
+          const resizeHandle = event.target.closest('[data-resize-handle="true"]');
+          if (resizeHandle) {
+            event.preventDefault();
+            event.stopPropagation();
+            beginResize(event, cls, node);
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           beginDrag(event, cls, node);
@@ -2005,6 +2205,7 @@
     function beginDrag(event, cls, element) {
       const point = pointerToWorkspace(event);
       state.drag = {
+        pointerId: event.pointerId,
         classId: cls.id,
         offsetX: point.x - cls.x,
         offsetY: point.y - cls.y,
@@ -2015,6 +2216,23 @@
       renderInspector();
       window.addEventListener("pointermove", onDragMove);
       window.addEventListener("pointerup", endDrag);
+      window.addEventListener("pointercancel", endDrag);
+    }
+
+    function beginResize(event, cls, element) {
+      state.resize = {
+        pointerId: event.pointerId,
+        classId: cls.id,
+        startClientX: event.clientX,
+        startWidth: cls.width,
+        element
+      };
+      element.classList.add("resizing");
+      state.selected = { type: "class", id: cls.id };
+      renderInspector();
+      window.addEventListener("pointermove", onResizeMove);
+      window.addEventListener("pointerup", endResize);
+      window.addEventListener("pointercancel", endResize);
     }
 
     function beginPan(event) {
@@ -2055,13 +2273,14 @@
     }
 
     function onDragMove(event) {
-      if (!state.drag) return;
+      if (!state.drag || event.pointerId !== state.drag.pointerId) return;
       const cls = state.diagram.classes.find((item) => item.id === state.drag.classId);
       if (!cls) return;
 
       const point = pointerToWorkspace(event);
-      cls.x = clampNumber(point.x - state.drag.offsetX, cls.x, 24, WORKSPACE_SIZE.width - cls.width - 24);
-      cls.y = clampNumber(point.y - state.drag.offsetY, cls.y, 24, WORKSPACE_SIZE.height - 120);
+      const shouldSnap = !event.altKey;
+      cls.x = clampAndMaybeSnap(point.x - state.drag.offsetX, cls.x, 24, WORKSPACE_SIZE.width - cls.width - 24, shouldSnap);
+      cls.y = clampAndMaybeSnap(point.y - state.drag.offsetY, cls.y, 24, WORKSPACE_SIZE.height - 120, shouldSnap);
       state.drag.element.style.left = `${cls.x}px`;
       state.drag.element.style.top = `${cls.y}px`;
       renderRelations();
@@ -2078,8 +2297,36 @@
       state.drag = null;
       window.removeEventListener("pointermove", onDragMove);
       window.removeEventListener("pointerup", endDrag);
+      window.removeEventListener("pointercancel", endDrag);
       saveToStorage();
       announce(t("movedClass"), "success");
+    }
+
+    function onResizeMove(event) {
+      if (!state.resize || event.pointerId !== state.resize.pointerId) return;
+      const cls = state.diagram.classes.find((item) => item.id === state.resize.classId);
+      if (!cls) return;
+
+      const deltaX = (event.clientX - state.resize.startClientX) / currentZoom;
+      const shouldSnap = !event.altKey;
+      cls.width = clampAndMaybeSnap(state.resize.startWidth + deltaX, cls.width, 220, 460, shouldSnap);
+      state.resize.element.style.width = `${cls.width}px`;
+      renderRelations();
+
+      const widthField = refs.inspectorPanel.querySelector('[data-field="width"]');
+      if (widthField) widthField.value = Math.round(cls.width);
+    }
+
+    function endResize(event) {
+      if (!state.resize) return;
+      if (event && event.pointerId !== undefined && event.pointerId !== state.resize.pointerId) return;
+      state.resize.element.classList.remove("resizing");
+      state.resize = null;
+      window.removeEventListener("pointermove", onResizeMove);
+      window.removeEventListener("pointerup", endResize);
+      window.removeEventListener("pointercancel", endResize);
+      saveToStorage();
+      announce(t("appliedChanges"), "success");
     }
 
     function pointerToWorkspace(event) {
@@ -2117,6 +2364,13 @@
     refs.copyJsonBtn.addEventListener("click", copyJson);
     refs.loadBtn.addEventListener("click", () => refs.fileInput.click());
     refs.deleteBtn.addEventListener("click", deleteSelected);
+    refs.zoomOutBtn.addEventListener("click", () => setZoom(currentZoom / (1 + ZOOM_STEP)));
+    refs.zoomInBtn.addEventListener("click", () => setZoom(currentZoom * (1 + ZOOM_STEP)));
+    refs.zoomResetBtn.addEventListener("click", () => setZoom(1));
+    refs.fitViewBtn.addEventListener("click", () => {
+      fitToScreen();
+      announce(t("fitViewDone"), "success");
+    });
     refs.localeSelect.addEventListener("change", (event) => {
       const nextLocale = event.target.value === "en" ? "en" : "ko";
       if (nextLocale === currentLocale) return;
@@ -2162,6 +2416,11 @@
         return;
       }
       if (event.button !== 0) return;
+      if (state.isSpacePressed) {
+        event.preventDefault();
+        beginPan(event);
+        return;
+      }
 
       const hitNode = target.closest(".uml-node");
       const hitRelation = target.closest("[data-relation-id]");
@@ -2277,9 +2536,17 @@
     });
 
     window.addEventListener("keydown", (event) => {
+      const activeTag = document.activeElement?.tagName;
+      const editing = activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT";
+
+      if (event.code === "Space" && !editing) {
+        state.isSpacePressed = true;
+        refs.workspaceViewport.classList.add("space-pan");
+        event.preventDefault();
+      }
+
       if ((event.key === "Delete" || event.key === "Backspace") && state.selected.type) {
-        const activeTag = document.activeElement?.tagName;
-        if (activeTag !== "INPUT" && activeTag !== "TEXTAREA" && activeTag !== "SELECT") {
+        if (!editing) {
           event.preventDefault();
           deleteSelected();
         }
@@ -2288,6 +2555,35 @@
         event.preventDefault();
         downloadJson();
       }
+      if ((event.ctrlKey || event.metaKey) && event.key === "0") {
+        event.preventDefault();
+        fitToScreen();
+        announce(t("fitViewDone"), "success");
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === "1") {
+        event.preventDefault();
+        setZoom(1);
+      }
+      if (!editing && (event.key === "+" || event.key === "=")) {
+        event.preventDefault();
+        setZoom(currentZoom * (1 + ZOOM_STEP));
+      }
+      if (!editing && event.key === "-") {
+        event.preventDefault();
+        setZoom(currentZoom / (1 + ZOOM_STEP));
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      if (event.code === "Space") {
+        state.isSpacePressed = false;
+        refs.workspaceViewport.classList.remove("space-pan");
+      }
+    });
+
+    window.addEventListener("blur", () => {
+      state.isSpacePressed = false;
+      refs.workspaceViewport.classList.remove("space-pan");
     });
 
     renderAll();
